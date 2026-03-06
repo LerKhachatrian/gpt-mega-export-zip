@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
 )
 
 from ..config.defaults import (
+    DEFAULT_CODING_THRESHOLD,
+    DEFAULT_MIN_CODING_CONFIDENCE,
     MAX_JSON_FALLBACK_MB,
     PARSE_CHUNK_SIZE,
     THEME_DARK,
@@ -31,10 +33,15 @@ from ..config.defaults import (
 from ..config.state import RuntimeState
 from ..data.cache_store import CacheStore
 from ..data.session_state import load_session_state, save_session_state
-from ..domain.enums import LoadState
+from ..domain.enums import LoadState, ThreadTypeFilter
 from ..domain.models import HealthEvent
 from ..services.import_service import ImportService
 from ..services.markdown_service import MarkdownService
+from ..services.number_format_service import (
+    NUMBER_FORMAT_COMPACT,
+    format_quantity,
+    normalize_number_format_mode,
+)
 from ..services.query_service import QueryService
 from ..services.stats_service import StatsService
 from .pages.health_page import HealthPage
@@ -82,6 +89,9 @@ class MainWindow(QMainWindow):
 
         self._parse_chunk_size = PARSE_CHUNK_SIZE
         self._max_json_fallback_mb = MAX_JSON_FALLBACK_MB
+        self._coding_threshold = DEFAULT_CODING_THRESHOLD
+        self._min_coding_confidence = DEFAULT_MIN_CODING_CONFIDENCE
+        self._number_format_mode = NUMBER_FORMAT_COMPACT
 
         self._rows_indexed = 0
         self._health_event_count = 0
@@ -94,6 +104,7 @@ class MainWindow(QMainWindow):
         if not restored:
             self._apply_theme(default_theme)
             self.source_input.setText(default_source)
+            self._apply_number_format_mode(NUMBER_FORMAT_COMPACT)
 
         source = self.source_input.text().strip()
         if source:
@@ -182,6 +193,10 @@ class MainWindow(QMainWindow):
         self._query_timer.setInterval(120)
         self._query_timer.setSingleShot(True)
 
+        self._stats_refresh_timer = QTimer(self)
+        self._stats_refresh_timer.setInterval(220)
+        self._stats_refresh_timer.setSingleShot(True)
+
     def _wire_signals(self) -> None:
         self.sidebar.currentRowChanged.connect(self.pages.setCurrentIndex)
 
@@ -197,6 +212,7 @@ class MainWindow(QMainWindow):
         self.settings_page.cache_action_requested.connect(self._on_cache_action)
 
         self._query_timer.timeout.connect(self.apply_query)
+        self._stats_refresh_timer.timeout.connect(self._refresh_stats)
 
         self._import_service.source_resolved.connect(self._on_source_resolved)
         self._import_service.source_load_started.connect(self._on_load_started)
@@ -237,6 +253,7 @@ class MainWindow(QMainWindow):
         self._rows_indexed = 0
         self._health_event_count = 0
         self._last_progress_text = "Starting load..."
+        self._stats_refresh_timer.stop()
 
         self.progress.setRange(0, 0)
         self._refresh_telemetry()
@@ -269,11 +286,17 @@ class MainWindow(QMainWindow):
         self._set_status(message)
 
     def _on_load_batch(self, rows: list) -> None:
-        self._rows_indexed += len(rows)
+        _ = rows  # Batched rows are already merged into cache store by ImportService.
+        self._rows_indexed = self._cache.count()
         self._refresh_telemetry()
-        self.threads_page.filter_panel.set_status(f"Loading ({self._rows_indexed:,} indexed)")
+        self.threads_page.filter_panel.set_status(
+            f"Loading ({format_quantity(self._rows_indexed, mode=self._number_format_mode)} indexed)"
+        )
         self.schedule_query()
-        self._refresh_stats()
+
+        # Throttle expensive whole-dataset stats recompute during heavy batch streams.
+        if not self._stats_refresh_timer.isActive():
+            self._stats_refresh_timer.start()
 
     def _on_load_done(self, payload: dict) -> None:
         self._state.load_state = LoadState.READY
@@ -285,13 +308,15 @@ class MainWindow(QMainWindow):
 
         self._rows_indexed = total_rows
         self._refresh_telemetry()
+        total_rows_text = format_quantity(total_rows, mode=self._number_format_mode)
 
         if cache_built:
-            self._set_status(f"Cache built and loaded: {total_rows:,} threads")
+            self._set_status(f"Cache built and loaded: {total_rows_text} threads")
         else:
-            self._set_status(f"Loaded from cache: {total_rows:,} threads")
+            self._set_status(f"Loaded from cache: {total_rows_text} threads")
 
         self.threads_page.set_ready()
+        self._stats_refresh_timer.stop()
         self.apply_query()
         self._refresh_stats()
 
@@ -301,6 +326,7 @@ class MainWindow(QMainWindow):
 
     def _on_load_error(self, message: str) -> None:
         self._state.load_state = LoadState.ERROR
+        self._stats_refresh_timer.stop()
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
         self._set_status(f"Load failed: {message}")
@@ -335,7 +361,12 @@ class MainWindow(QMainWindow):
         theme = settings.get("theme") or THEME_DARK
         self._parse_chunk_size = int(settings.get("parse_chunk_size") or PARSE_CHUNK_SIZE)
         self._max_json_fallback_mb = int(settings.get("max_json_fallback_mb") or MAX_JSON_FALLBACK_MB)
+        coding_threshold_pct = int(settings.get("coding_threshold_pct") or int(DEFAULT_CODING_THRESHOLD * 100))
+        self._coding_threshold = max(0.0, min(1.0, coding_threshold_pct / 100.0))
+        self._apply_number_format_mode(str(settings.get("number_format_mode") or NUMBER_FORMAT_COMPACT))
         self._apply_theme(theme)
+        self.apply_query()
+        self._refresh_stats()
 
     def _on_cache_action(self, action: str) -> None:
         if action == "clear_all":
@@ -371,8 +402,12 @@ class MainWindow(QMainWindow):
             shared_only=filters["shared_only"],
             parse_health=filters["parse_health"],
             sort_mode=filters["sort_mode"],
+            thread_type=filters.get("thread_type", ThreadTypeFilter.ALL),
+            coding_threshold=self._coding_threshold,
+            min_coding_confidence=filters.get("min_coding_confidence", self._min_coding_confidence),
         )
 
+        self.threads_page.set_coding_threshold(self._coding_threshold)
         self.threads_page.set_rows(visible, preserve_thread_id=current_thread)
 
     def load_selected_thread(self, thread_id: str) -> None:
@@ -381,7 +416,7 @@ class MainWindow(QMainWindow):
     def _refresh_stats(self) -> None:
         rows = self._cache.snapshot()
         health = self._cache.health_events()
-        stats = self._stats_service.global_stats(rows, health)
+        stats = self._stats_service.global_stats(rows, health, coding_threshold=self._coding_threshold)
         self.overview_page.update_stats(stats)
         self.stats_page.update_stats(stats, self._stats_service.top_threads(rows, limit=30))
 
@@ -404,8 +439,19 @@ class MainWindow(QMainWindow):
     def _refresh_telemetry(self) -> None:
         cache_size_mb = self._import_service.cache_total_size_bytes() / (1024 * 1024)
         self.telemetry_label.setText(
-            f"rows: {self._rows_indexed:,} | health: {self._health_event_count} | cache: {cache_size_mb:,.1f} MB"
+            f"rows: {format_quantity(self._rows_indexed, mode=self._number_format_mode)} | "
+            f"health: {format_quantity(self._health_event_count, mode=self._number_format_mode)} | "
+            f"cache: {cache_size_mb:,.1f} MB"
         )
+
+    def _apply_number_format_mode(self, mode: str) -> None:
+        self._number_format_mode = normalize_number_format_mode(mode)
+        self._state.number_format_mode = self._number_format_mode
+        self.settings_page.set_number_format_mode(self._number_format_mode)
+        self.overview_page.set_number_format_mode(self._number_format_mode)
+        self.stats_page.set_number_format_mode(self._number_format_mode)
+        self.threads_page.set_number_format_mode(self._number_format_mode)
+        self._refresh_telemetry()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.RightButton and self._is_hot_corner(event):
@@ -434,10 +480,14 @@ class MainWindow(QMainWindow):
             "theme": self._state.theme,
             "parse_chunk_size": int(self._parse_chunk_size),
             "max_json_fallback_mb": int(self._max_json_fallback_mb),
+            "coding_threshold_pct": int(round(self._coding_threshold * 100)),
+            "number_format_mode": self._number_format_mode,
             "filter_query": filters.get("query", ""),
             "filter_shared_only": bool(filters.get("shared_only", False)),
             "filter_parse_health": filters.get("parse_health", "all"),
             "filter_sort_mode": getattr(filters.get("sort_mode"), "value", "updated"),
+            "filter_thread_type": getattr(filters.get("thread_type"), "value", ThreadTypeFilter.ALL.value),
+            "filter_min_coding_confidence_pct": int(round(float(filters.get("min_coding_confidence", 0.0)) * 100)),
         }
 
     def _restore_session_state(self) -> bool:
@@ -456,11 +506,25 @@ class MainWindow(QMainWindow):
 
         self._parse_chunk_size = int(payload.get("parse_chunk_size") or PARSE_CHUNK_SIZE)
         self._max_json_fallback_mb = int(payload.get("max_json_fallback_mb") or MAX_JSON_FALLBACK_MB)
+        self._apply_number_format_mode(str(payload.get("number_format_mode") or NUMBER_FORMAT_COMPACT))
+        self._coding_threshold = max(
+            0.0,
+            min(
+                1.0,
+                int(payload.get("coding_threshold_pct") or int(DEFAULT_CODING_THRESHOLD * 100)) / 100.0,
+            ),
+        )
+        self.settings_page.set_parse_chunk_size(self._parse_chunk_size)
+        self.settings_page.set_max_json_fallback_mb(self._max_json_fallback_mb)
+        self.settings_page.set_coding_threshold_pct(int(round(self._coding_threshold * 100)))
 
         filter_query = str(payload.get("filter_query") or payload.get("quick_search") or "")
         filter_shared_only = bool(payload.get("filter_shared_only", False))
         filter_parse_health = str(payload.get("filter_parse_health") or "all")
         filter_sort_mode = str(payload.get("filter_sort_mode") or "updated")
+        filter_thread_type = str(payload.get("filter_thread_type") or ThreadTypeFilter.ALL.value)
+        filter_min_coding_confidence_pct = int(payload.get("filter_min_coding_confidence_pct") or 0)
+        self._min_coding_confidence = max(0.0, min(1.0, filter_min_coding_confidence_pct / 100.0))
 
         self.quick_search.setText(filter_query)
         self.threads_page.restore_filters(
@@ -468,6 +532,8 @@ class MainWindow(QMainWindow):
             shared_only=filter_shared_only,
             parse_health=filter_parse_health,
             sort_mode=filter_sort_mode,
+            thread_type=filter_thread_type,
+            min_confidence_pct=filter_min_coding_confidence_pct,
         )
         return True
 

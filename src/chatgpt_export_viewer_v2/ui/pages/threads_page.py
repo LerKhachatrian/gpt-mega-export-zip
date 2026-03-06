@@ -48,16 +48,32 @@ class ThreadsPage(QWidget):
     def set_rows(self, rows: list, preserve_thread_id: str | None = None) -> None:
         self.list_view.set_rows(rows, preserve_thread_id=preserve_thread_id)
 
+    def set_coding_threshold(self, threshold: float) -> None:
+        self.list_view.set_coding_threshold(threshold)
+
+    def set_number_format_mode(self, mode: str) -> None:
+        self.list_view.set_number_format_mode(mode)
+
     def selected_thread_id(self) -> str | None:
         return self.list_view.selected_thread_id()
 
     def current_filters(self) -> dict:
         return self.filter_panel.current_filters()
 
-    def restore_filters(self, query: str, shared_only: bool, parse_health: str, sort_mode: str) -> None:
+    def restore_filters(
+        self,
+        query: str,
+        shared_only: bool,
+        parse_health: str,
+        sort_mode: str,
+        thread_type: str,
+        min_confidence_pct: int,
+    ) -> None:
         self.filter_panel.restore_filters(
             query=query,
             shared_only=shared_only,
             parse_health=parse_health,
             sort_mode=sort_mode,
+            thread_type=thread_type,
+            min_confidence_pct=min_confidence_pct,
         )

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from ...config.defaults import THREAD_LIST_PAGE_SIZE
 from ...domain.models import ThreadSummary
+from ...services.number_format_service import NUMBER_FORMAT_COMPACT, format_quantity, normalize_number_format_mode
 
 
 class ThreadListView(QWidget):
@@ -24,6 +25,8 @@ class ThreadListView(QWidget):
         self._rows: list[ThreadSummary] = []
         self._rendered_count = 0
         self._page_size = THREAD_LIST_PAGE_SIZE
+        self._coding_threshold = 0.50
+        self._number_format_mode = NUMBER_FORMAT_COMPACT
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -96,13 +99,29 @@ class ThreadListView(QWidget):
         self._rendered_count = end
         self._refresh_controls()
 
+    def set_coding_threshold(self, threshold: float) -> None:
+        self._coding_threshold = min(1.0, max(0.0, float(threshold)))
+
+    def set_number_format_mode(self, mode: str) -> None:
+        self._number_format_mode = normalize_number_format_mode(mode)
+
     def _build_item(self, row: ThreadSummary) -> QListWidgetItem:
         shared = " [shared]" if row.is_shared else ""
         health = " [partial]" if row.parse_health != "ok" else ""
+        has_classification = (row.code_chars + row.non_code_chars) > 0
+        is_primary = has_classification and row.code_ratio >= self._coding_threshold
+        label = "coding" if is_primary else "non-coding"
+        if not has_classification:
+            label = "analyzing"
+        code_ratio_pct = row.code_ratio * 100.0
+        confidence_pct = row.coding_confidence * 100.0
         line = (
             f"{row.title}{shared}{health}\n"
             f"{row.snippet}\n"
-            f"{row.total_messages:,} msgs | {row.words:,} words"
+            f"{format_quantity(row.total_messages, mode=self._number_format_mode)} msgs | "
+            f"{format_quantity(row.words, mode=self._number_format_mode)} words | "
+            f"{format_quantity(row.tokens_o200k, mode=self._number_format_mode)} tok(o200k) | "
+            f"{label} {code_ratio_pct:.0f}% | conf {confidence_pct:.0f}%"
         )
         item = QListWidgetItem(line)
         item.setData(Qt.ItemDataRole.UserRole, row.thread_id)
@@ -111,7 +130,10 @@ class ThreadListView(QWidget):
 
     def _refresh_controls(self) -> None:
         total = len(self._rows)
-        self.count_label.setText(f"{total:,} results | showing {self._rendered_count:,}")
+        mode = self._number_format_mode
+        self.count_label.setText(
+            f"{format_quantity(total, mode=mode)} results | showing {format_quantity(self._rendered_count, mode=mode)}"
+        )
         self.load_more_btn.setVisible(self._rendered_count < total)
 
     def _on_current_changed(self, current: QListWidgetItem | None, _previous: QListWidgetItem | None) -> None:

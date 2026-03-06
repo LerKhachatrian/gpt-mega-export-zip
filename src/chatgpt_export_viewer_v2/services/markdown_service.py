@@ -65,6 +65,13 @@ class MarkdownService:
             f"- Parse health: `{summary.parse_health}`",
             f"- Messages: `{summary.total_messages}`",
             f"- Words: `{summary.words}`",
+            f"- Tokens (o200k): `{summary.tokens_o200k}`",
+            f"- Code chars: `{summary.code_chars}`",
+            f"- Non-code chars: `{summary.non_code_chars}`",
+            f"- Code ratio: `{summary.code_ratio * 100:.1f}%`",
+            f"- Coding confidence: `{summary.coding_confidence * 100:.1f}%`",
+            f"- Primarily coding (default 50%): `{summary.is_primary_coding}`",
+            f"- Coding signals: `{summary.coding_signals or 'n/a'}`",
             f"- Created: `{self._fmt(summary.created_at)}`",
             f"- Updated: `{self._fmt(summary.updated_at)}`",
         ]

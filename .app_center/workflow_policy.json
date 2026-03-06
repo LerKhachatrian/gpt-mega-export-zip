@@ -1,0 +1,23 @@
+{
+  "workflow_sticky": true,
+  "code_plan_mode_default": "auto",
+  "code_plan_auto_prefers": "deep",
+  "ux_plan_mode_default": "auto",
+  "ux_plan_auto_prefers": "deep_when_requested_or_complex",
+  "python_gui_policy_default": "auto",
+  "python_gui_showcase_reference_mode_default": "bootstrap_only",
+  "commit_and_push_default": true,
+  "mandatory_commit_and_push": true,
+  "followup_queue_enabled": true,
+  "auto_approve_default": true,
+  "approval_policy_default": "never",
+  "push_required": true,
+  "commit_exclude_profile": "default",
+  "quick_patch_minimal_default": true,
+  "escalation_on_complexity_default": true,
+  "split_targets_mode_default": "hybrid",
+  "split_targets_profile_default": "balanced",
+  "default_model": "gpt-5.3-codex",
+  "default_context_window_tokens": 258000,
+  "updated_at": "2026-03-04T01:20:13"
+}

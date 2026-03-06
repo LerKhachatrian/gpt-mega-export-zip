@@ -18,7 +18,9 @@ class CacheReader:
         cursor = connection.execute(
             """
             SELECT thread_id, title, created_at, updated_at, total_messages,
-                   user_messages, assistant_messages, words, snippet,
+                   user_messages, assistant_messages, words, tokens_o200k,
+                   code_chars, non_code_chars, code_ratio, coding_confidence,
+                   is_primary_coding, coding_signals, snippet,
                    source_file, is_shared, parse_health
             FROM threads
             ORDER BY updated_at DESC
@@ -39,6 +41,13 @@ class CacheReader:
                     user_messages=int(row["user_messages"] or 0),
                     assistant_messages=int(row["assistant_messages"] or 0),
                     words=int(row["words"] or 0),
+                    tokens_o200k=int(row["tokens_o200k"] or 0),
+                    code_chars=int(row["code_chars"] or 0),
+                    non_code_chars=int(row["non_code_chars"] or 0),
+                    code_ratio=float(row["code_ratio"] or 0.0),
+                    coding_confidence=float(row["coding_confidence"] or 0.0),
+                    is_primary_coding=bool(int(row["is_primary_coding"] or 0)),
+                    coding_signals=str(row["coding_signals"] or ""),
                     snippet=row["snippet"] or "",
                     source_file=row["source_file"] or "",
                     is_shared=bool(int(row["is_shared"] or 0)),
@@ -82,7 +91,9 @@ class CacheReader:
         thread_row = hot.execute(
             """
             SELECT thread_id, title, created_at, updated_at, total_messages,
-                   user_messages, assistant_messages, words, snippet,
+                   user_messages, assistant_messages, words, tokens_o200k,
+                   code_chars, non_code_chars, code_ratio, coding_confidence,
+                   is_primary_coding, coding_signals, snippet,
                    source_file, is_shared, parse_health
             FROM threads
             WHERE thread_id = ?
@@ -113,6 +124,13 @@ class CacheReader:
             user_messages=int(thread_row["user_messages"] or 0),
             assistant_messages=int(thread_row["assistant_messages"] or 0),
             words=int(thread_row["words"] or 0),
+            tokens_o200k=int(thread_row["tokens_o200k"] or 0),
+            code_chars=int(thread_row["code_chars"] or 0),
+            non_code_chars=int(thread_row["non_code_chars"] or 0),
+            code_ratio=float(thread_row["code_ratio"] or 0.0),
+            coding_confidence=float(thread_row["coding_confidence"] or 0.0),
+            is_primary_coding=bool(int(thread_row["is_primary_coding"] or 0)),
+            coding_signals=str(thread_row["coding_signals"] or ""),
             snippet=thread_row["snippet"] or "",
             source_file=thread_row["source_file"] or "",
             is_shared=bool(int(thread_row["is_shared"] or 0)),

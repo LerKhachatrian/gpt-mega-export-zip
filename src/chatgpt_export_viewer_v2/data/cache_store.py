@@ -25,6 +25,9 @@ class CacheStore:
     def snapshot(self) -> list[ThreadSummary]:
         return list(self._summaries.values())
 
+    def count(self) -> int:
+        return len(self._summaries)
+
     def get_summary(self, thread_id: str) -> ThreadSummary | None:
         return self._summaries.get(thread_id)
 

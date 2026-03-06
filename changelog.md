@@ -1,3 +1,9 @@
+## 2026-03-05T20:38:13-05:00
+- Rebuilt the Overview page around a calmer information hierarchy: a focused top-line metric band, explicit processing signals, and grouped breakdown cards instead of one long wall of equal-weight KPIs.
+- Added responsive card reflow so the Overview page wraps cleanly at narrower widths instead of forcing horizontal overflow.
+- Replaced the zero-filled empty dashboard with a real onboarding state that explains what to load and what the page is for.
+- Added an internal overview snapshot fixture plus `.gitignore` coverage for repo-local UI capture artifacts and the local virtual environment used for verification.
+
 ## 2026-03-05T18:56:48-05:00
 - Added end-to-end coding vs non-coding volume metrics to global stats: messages, words, tokens (o200k), and per-class averages.
 - Added pending/unclassified volume tracking (messages/words/tokens) so coding+non-coding splits can be interpreted against total global volume.

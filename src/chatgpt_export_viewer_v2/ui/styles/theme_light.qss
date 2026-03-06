@@ -208,87 +208,152 @@ QLabel#sectionTitle {
 
 QWidget#overviewHeaderPanel {
   background: #ffffff;
-  border: 1px solid #d6dde7;
-  border-radius: 14px;
+  border: 1px solid #d4ddea;
+  border-radius: 18px;
 }
 
 QLabel#overviewTitle {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  color: #1b2635;
+  color: #1a2838;
 }
 
 QLabel#overviewSourceLabel {
-  color: #5c6776;
+  color: #5e7288;
   font-size: 12px;
 }
 
+QLabel#overviewLead {
+  color: #31475f;
+  font-size: 13px;
+}
+
 QLabel#overviewBadge {
-  background: #e8f0fb;
-  color: #1f3f66;
-  border: 1px solid #bdd0e9;
-  border-radius: 12px;
-  padding: 3px 10px;
+  background: #edf4fd;
+  color: #23466d;
+  border: 1px solid #c5d7ec;
+  border-radius: 13px;
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
 }
 
+QWidget#overviewEmptyState {
+  background: #ffffff;
+  border: 1px solid #d8e1ec;
+  border-radius: 18px;
+}
+
+QLabel#overviewEmptyTitle {
+  color: #1f3145;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+QLabel#overviewEmptyCopy,
+QLabel#overviewEmptySteps {
+  color: #5f7389;
+  font-size: 13px;
+}
+
 QWidget#overviewSection {
   background: #ffffff;
-  border: 1px solid #d7dee8;
-  border-radius: 12px;
+  border: 1px solid #d8e1ec;
+  border-radius: 18px;
 }
 
 QLabel#overviewSectionTitle {
-  font-size: 15px;
-  font-weight: 650;
-  color: #263548;
+  font-size: 16px;
+  font-weight: 700;
+  color: #223549;
 }
 
 QLabel#overviewSectionSubtitle {
-  color: #67758a;
+  color: #688096;
   font-size: 12px;
 }
 
 QWidget#overviewMetricCard {
-  background: #f8fbff;
-  border: 1px solid #d9e2ee;
-  border-radius: 12px;
+  background: #f9fbfe;
+  border: 1px solid #dae3ee;
+  border-radius: 16px;
+}
+
+QWidget#overviewMetricCard[variant="primary"] {
+  background: #eef5fe;
+  border: 1px solid #c4d8ee;
 }
 
 QLabel#overviewMetricTitle {
-  color: #697a91;
-  font-size: 12px;
+  color: #62768e;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 QLabel#overviewMetricValue {
-  color: #1e2f45;
-  font-size: 26px;
+  color: #1e3045;
+  font-size: 28px;
   font-weight: 700;
 }
 
 QLabel#overviewMetricHint {
-  color: #7c8ea6;
+  color: #768ba4;
   font-size: 11px;
 }
 
-QLabel#overviewProgressLabel {
-  color: #4f617a;
-  font-size: 12px;
-  min-width: 190px;
+QWidget#overviewProgressCard,
+QWidget#overviewGroupCard {
+  background: #f9fbfe;
+  border: 1px solid #dae3ee;
+  border-radius: 16px;
 }
 
 QProgressBar#overviewProgressBar {
-  min-height: 12px;
-  max-height: 12px;
-  border: 1px solid #ccd8e8;
-  border-radius: 6px;
-  background: #edf3fb;
+  min-height: 10px;
+  max-height: 10px;
+  border: 1px solid #cad8e7;
+  border-radius: 5px;
+  background: #ecf2f9;
 }
 
 QProgressBar#overviewProgressBar::chunk {
-  border-radius: 6px;
-  background: #448ddf;
+  border-radius: 5px;
+  background: #4a96ea;
+}
+
+QLabel#overviewProgressTitle,
+QLabel#overviewGroupTitle {
+  color: #223549;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+QLabel#overviewProgressPercent {
+  color: #244a73;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+QLabel#overviewProgressHint,
+QLabel#overviewGroupSubtitle {
+  color: #677f96;
+  font-size: 12px;
+}
+
+QWidget#overviewStatRow {
+  border-top: 1px solid #e3eaf2;
+  padding-top: 8px;
+}
+
+QLabel#overviewStatRowLabel {
+  color: #62758d;
+  font-size: 12px;
+}
+
+QLabel#overviewStatRowValue {
+  color: #1f3145;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 QWidget#settingsHeaderPanel {

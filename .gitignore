@@ -1,8 +1,19 @@
+# Python and runtime artifacts
 __pycache__/
 *.py[cod]
 *$py.class
 *.sqlite
 *.db
 .cache/
+
+# Local env/tool state
 .venv/
 .codex_artifacts/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Repository and OS artifacts
+*.log
+.DS_Store
+Thumbs.db

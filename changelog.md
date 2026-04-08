@@ -1,3 +1,8 @@
+## 2026-03-11T14:11:04-04:00
+- Updated root `.gitignore` so it only ignores runtime/runtime-like artifacts and local tool or OS metadata, with no source-file glob patterns added or preserved.
+- Prepending this changelog entry at the top confirms this implementation pass in the root-level changelog.
+Session ID: 019cde16-f17d-7c02-9995-a9562a3615be
+
 ## 2026-03-05T20:38:13-05:00
 - Rebuilt the Overview page around a calmer information hierarchy: a focused top-line metric band, explicit processing signals, and grouped breakdown cards instead of one long wall of equal-weight KPIs.
 - Added responsive card reflow so the Overview page wraps cleanly at narrower widths instead of forcing horizontal overflow.
